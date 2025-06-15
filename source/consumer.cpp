@@ -1,29 +1,32 @@
 #include "common.hpp"
-#include <iostream>
-#include <vector>
-#include <thread>
 #include <chrono>
 #include <cstring>
+#include <fcntl.h>
+#include <iostream>
 #include <semaphore.h>
 #include <sys/shm.h>
-#include <fcntl.h>
+#include <thread>
+#include <vector>
 
 // --- Step 1: Async Initialization ---
-bool wait_init_ready_async(SharedQueue*& shared_queue,
-                           int retry_interval_ms = 200,
-                           int max_retries = -1) {
-    for (int attempt = 0; attempt < max_retries || max_retries == -1; ++attempt) {
-        sem_t* sem_init = sem_open(SEM_INIT_READY_NAME, 0);
-        if (sem_init != SEM_FAILED) {
+bool wait_init_ready_async(SharedQueue *&shared_queue, int retry_interval_ms = 200, int max_retries = -1)
+{
+    for (int attempt = 0; attempt < max_retries || max_retries == -1; ++attempt)
+    {
+        sem_t *sem_init = sem_open(SEM_INIT_READY_NAME, 0);
+        if (sem_init != SEM_FAILED)
+        {
             std::cout << "Consumer: Init semaphore found. Waiting for signal...\n";
             sem_wait(sem_init);
             sem_close(sem_init);
 
             int shmid = shmget(SHM_KEY, SHM_SIZE, 0666);
-            if (shmid != -1) {
-                void* addr = shmat(shmid, nullptr, 0);
-                if (addr != (void*)-1) {
-                    shared_queue = reinterpret_cast<SharedQueue*>(addr);
+            if (shmid != -1)
+            {
+                void *addr = shmat(shmid, nullptr, 0);
+                if (addr != (void *)-1)
+                {
+                    shared_queue = reinterpret_cast<SharedQueue *>(addr);
                     std::cout << "Consumer: Attached to shared memory.\n";
                     return true;
                 }
@@ -36,16 +39,14 @@ bool wait_init_ready_async(SharedQueue*& shared_queue,
 }
 
 // --- Step 2: Attach Semaphores ---
-bool attach_semaphores(sem_t*& sem_filled,
-                       sem_t*& sem_empty,
-                       sem_t*& sem_consumed,
-                       sem_t*& sem_shutdown) {
-    sem_filled   = sem_open(SEM_FILLED_NAME,    0);
-    sem_empty    = sem_open(SEM_EMPTY_NAME,     0);
-    sem_consumed = sem_open(SEM_CONSUMED_NAME,  0);
-    sem_shutdown = sem_open(SEM_SHUTDOWN_NAME,  0);
-    if (sem_filled == SEM_FAILED || sem_empty == SEM_FAILED ||
-        sem_consumed == SEM_FAILED || sem_shutdown == SEM_FAILED) {
+bool attach_semaphores(sem_t *&sem_filled, sem_t *&sem_empty, sem_t *&sem_consumed, sem_t *&sem_shutdown)
+{
+    sem_filled = sem_open(SEM_FILLED_NAME, 0);
+    sem_empty = sem_open(SEM_EMPTY_NAME, 0);
+    sem_consumed = sem_open(SEM_CONSUMED_NAME, 0);
+    sem_shutdown = sem_open(SEM_SHUTDOWN_NAME, 0);
+    if (sem_filled == SEM_FAILED || sem_empty == SEM_FAILED || sem_consumed == SEM_FAILED || sem_shutdown == SEM_FAILED)
+    {
         perror("sem_open");
         return false;
     }
@@ -54,32 +55,33 @@ bool attach_semaphores(sem_t*& sem_filled,
 }
 
 // --- Worker Thread ---
-void process_data(SharedQueue* queue, uint32_t idx, sem_t* sem_empty) {
+void process_data(SharedQueue *queue, uint32_t idx, sem_t *sem_empty)
+{
     std::vector<char> buf(ELEMENT_SIZE);
     auto start = std::chrono::high_resolution_clock::now();
     std::memcpy(buf.data(), queue->slots[idx].data, ELEMENT_SIZE);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> d = end - start;
 
-    std::cout << "[Thread " << std::this_thread::get_id()
-              << "] Read slot " << idx
-              << " in " << d.count() << " ms\n";
+    std::cout << "[Thread " << std::this_thread::get_id() << "] Read slot " << idx << " in " << d.count() << " ms\n";
 
     sem_post(sem_empty);
-    std::cout << "[Thread " << std::this_thread::get_id()
-              << "] Marked slot " << idx << " empty\n";
+    std::cout << "[Thread " << std::this_thread::get_id() << "] Marked slot " << idx << " empty\n";
 }
 
 // --- Step 3: Consume Until Producer Finishes ---
-void consume_items(SharedQueue* queue,
-                   sem_t* sem_filled,
-                   sem_t* sem_empty,
-                   std::vector<std::thread>& workers) {
-    while (true) {
-        if (!queue->producer_finished.load(std::memory_order_acquire)) {
+void consume_items(SharedQueue *queue, sem_t *sem_filled, sem_t *sem_empty, std::vector<std::thread> &workers)
+{
+    while (true)
+    {
+        if (!queue->producer_finished.load(std::memory_order_acquire))
+        {
             sem_wait(sem_filled);
-        } else {
-            if (sem_trywait(sem_filled) != 0) {
+        }
+        else
+        {
+            if (sem_trywait(sem_filled) != 0)
+            {
                 break;
             }
         }
@@ -92,11 +94,8 @@ void consume_items(SharedQueue* queue,
 }
 
 // --- Step 4: Cleanup ---
-void cleanup(SharedQueue* queue,
-             sem_t* sem_filled,
-             sem_t* sem_empty,
-             sem_t* sem_consumed,
-             sem_t* sem_shutdown) {
+void cleanup(SharedQueue *queue, sem_t *sem_filled, sem_t *sem_empty, sem_t *sem_consumed, sem_t *sem_shutdown)
+{
     shmdt(queue);
     sem_close(sem_filled);
     sem_close(sem_empty);
@@ -105,12 +104,15 @@ void cleanup(SharedQueue* queue,
     std::cout << "Consumer: IPC cleanup complete.\n";
 }
 
-int main() {
-    SharedQueue* queue = nullptr;
-    if (!wait_init_ready_async(queue)) return 1;
+int main()
+{
+    SharedQueue *queue = nullptr;
+    if (!wait_init_ready_async(queue))
+        return 1;
 
     sem_t *sem_filled, *sem_empty, *sem_consumed, *sem_shutdown;
-    if (!attach_semaphores(sem_filled, sem_empty, sem_consumed, sem_shutdown)) {
+    if (!attach_semaphores(sem_filled, sem_empty, sem_consumed, sem_shutdown))
+    {
         shmdt(queue);
         return 1;
     }
@@ -119,8 +121,10 @@ int main() {
     consume_items(queue, sem_filled, sem_empty, workers);
 
     std::cout << "Consumer: Joining worker threads...\n";
-    for (auto& t : workers) {
-        if (t.joinable()) t.join();
+    for (auto &t : workers)
+    {
+        if (t.joinable())
+            t.join();
     }
 
     std::cout << "Consumer: All items processed, signaling producer...\n";
