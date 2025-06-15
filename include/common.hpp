@@ -26,10 +26,10 @@
 
 constexpr std::size_t MEGABYTE = 1024 * 1024;
 // NOTE: HUGE_PAGES only has an effect if each element is at least 16MB
-constexpr std::size_t ELEMENT_SIZE = 16 * MEGABYTE;              // per element
+constexpr std::size_t ELEMENT_SIZE = 32 * MEGABYTE;              // per element
 constexpr std::size_t ELEMENT_SIZE_MB = ELEMENT_SIZE / MEGABYTE; // per element
-constexpr std::size_t QUEUE_CAPACITY = 10;                       // Number of slots available in SHM Queue
-constexpr std::size_t ELEMENTS_PRODUCED = 25;                    // The producer will produce 25 elements
+constexpr std::size_t QUEUE_CAPACITY = 5;                       // Number of slots available in SHM Queue
+constexpr std::size_t ELEMENTS_PRODUCED = 6;                    // The producer will produce 25 elements
 
 // --- IPC Keys and Names ---
 const key_t SHM_KEY = ftok("shmfile", 65);

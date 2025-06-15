@@ -93,3 +93,139 @@ You can control these via `#define` statements or `-D` flags during compilation.
 mkdir build && cd build
 cmake ..
 make
+```
+
+## Example execution
+
+### With Huge Pages Disabled
+
+Execution of the producer and consumer with the settings:
+
+```c++
+#define USE_PRETOUCH 1 // Touch each page to fault it i
+#ifndef USE_MLOCK
+#define USE_MLOCK 1 // Lock pages into RAM (mlock)
+#define USE_MADV 1 // Advise kernel to prefetch pages (MADV_WILLNEED)
+#define USE_HUGEPAGES 0 // Allocate shared memory with huge pages
+```
+
+```text
+./run_producer.sh
+Producer: IPC semaphores initialized.
+Producer: Pre-touching pages...
+Producer: Locked shared memory into RAM.
+Producer: Advised kernel to prefetch pages.
+Producer: Shared memory initialized.
+Producer: Init signal sent.
+Producer: Writing item 1 to slot 0
+Producer: Wrote 32 MB in 2.51804 ms.
+Producer: Writing item 2 to slot 1
+Producer: Wrote 32 MB in 2.28402 ms.
+Producer: Writing item 3 to slot 2
+Producer: Wrote 32 MB in 2.25075 ms.
+Producer: Writing item 4 to slot 3
+Producer: Wrote 32 MB in 2.23441 ms.
+Producer: Writing item 5 to slot 4
+Producer: Wrote 32 MB in 2.38323 ms.
+Producer: Writing item 6 to slot 0
+Producer: Wrote 32 MB in 2.12948 ms.
+Producer: Waiting for consumer...
+Producer: Shutdown signal sent.
+Producer: IPC cleanup complete.
+Producer: Exiting.
+```
+
+Consumer execution
+
+```txt
+./run_consumer.sh
+Consumer: Init semaphore found. Waiting for signal...
+Consumer: Attached to shared memory.
+Consumer: Semaphores opened successfully.
+[Thread 140519155951296] Read slot 0 in 13.5326 ms
+[Thread 140519155951296] Marked slot 0 empty
+[Thread 140519139169984] Read slot 1 in 13.2907 ms
+[Thread 140519139169984] Marked slot 1 empty
+[Thread 140519049000640] Read slot 2 in 13.4837 ms
+[Thread 140519049000640] Marked slot 2 empty
+[Thread 140519032219328] Read slot 3 in 13.7078 ms
+[Thread 140519032219328] Marked slot 3 empty
+[Thread 140519015438016] Read slot 4 in 13.4182 ms
+[Thread 140519015438016] Marked slot 4 empty
+[Thread 140518998656704] Read slot 0 in 2.51954 ms
+[Thread 140518998656704] Marked slot 0 empty
+Consumer: Joining worker threads...
+[Thread 140518981875392] Read slot 1 in 2.54221 ms
+[Thread 140518981875392] Marked slot 1 empty
+Consumer: All items processed, signaling producer...
+Consumer: IPC cleanup complete.
+Consumer: Exiting.
+```
+
+
+### With Huge Pages Enabled
+
+Execution of the producer and consumer with the settings:
+
+```c
+#define USE_PRETOUCH 1  // Touch each page to fault it i
+#ifndef USE_MLOCK
+#define USE_MLOCK 1     // Lock pages into RAM (mlock)
+#define USE_MADV 1      // Advise kernel to prefetch pages (MADV_WILLNEED)
+#define USE_HUGEPAGES 1 // Allocate shared memory with huge pages
+```
+
+Producer execution
+
+```txt
+./run_producer.sh
+Producer: IPC semaphores initialized.
+Producer: Pre-touching pages...
+Producer: Locked shared memory into RAM.
+Producer: Advised kernel to prefetch pages.
+Producer: Shared memory initialized.
+Producer: Init signal sent.
+Producer: Writing item 1 to slot 0
+Producer: Wrote 32 MB in 2.14431 ms.
+Producer: Writing item 2 to slot 1
+Producer: Wrote 32 MB in 2.33229 ms.
+Producer: Writing item 3 to slot 2
+Producer: Wrote 32 MB in 1.95667 ms.
+Producer: Writing item 4 to slot 3
+Producer: Wrote 32 MB in 1.88985 ms.
+Producer: Writing item 5 to slot 4
+Producer: Wrote 32 MB in 2.02096 ms.
+Producer: Writing item 6 to slot 0
+Producer: Wrote 32 MB in 2.09838 ms.
+Producer: Waiting for consumer...
+Producer: Shutdown signal sent.
+Producer: IPC cleanup complete.
+Producer: Exiting.
+```
+
+Consumer Execution
+
+```txt
+./run_consumer.sh
+Consumer: Init semaphore found. Waiting for signal...
+Consumer: Attached to shared memory.
+Consumer: Semaphores opened successfully.
+[Thread 140086672881344] Read slot 0 in 2.23129 ms
+[Thread 140086672881344] Marked slot 0 empty
+[Thread 140086656100032] Read slot 1 in 3.47608 ms
+[Thread 140086656100032] Marked slot 1 empty
+[Thread 140086639318720] Read slot 2 in 3.15369 ms
+[Thread 140086639318720] Marked slot 2 empty
+[Thread 140086622537408] Read slot 3 in 2.30085 ms
+[Thread 140086622537408] Marked slot 3 empty
+[Thread 140086532372160] Read slot 4 in 2.50649 ms
+[Thread 140086532372160] Marked slot 4 empty
+[Thread 140086515590848] Read slot 0 in 2.12986 ms
+[Thread 140086515590848] Marked slot 0 empty
+Consumer: Joining worker threads...
+[Thread 140086498809536] Read slot 1 in 2.21936 ms
+[Thread 140086498809536] Marked slot 1 empty
+Consumer: All items processed, signaling producer...
+Consumer: IPC cleanup complete.
+Consumer: Exiting.
+```
