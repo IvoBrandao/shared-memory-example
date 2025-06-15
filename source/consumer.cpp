@@ -1,4 +1,3 @@
-// consumer.cpp
 #include "common.hpp"
 #include <iostream>
 #include <vector>
@@ -54,7 +53,7 @@ bool attach_semaphores(sem_t*& sem_filled,
     return true;
 }
 
-// Worker thread
+// --- Worker Thread ---
 void process_data(SharedQueue* queue, uint32_t idx, sem_t* sem_empty) {
     std::vector<char> buf(ELEMENT_SIZE);
     auto start = std::chrono::high_resolution_clock::now();
@@ -116,21 +115,17 @@ int main() {
         return 1;
     }
 
-    // Consume & spawn workers
     std::vector<std::thread> workers;
     consume_items(queue, sem_filled, sem_empty, workers);
 
-    // Join all workers
     std::cout << "Consumer: Joining worker threads...\n";
     for (auto& t : workers) {
         if (t.joinable()) t.join();
     }
 
-    // Notify producer we’re done
     std::cout << "Consumer: All items processed, signaling producer...\n";
     sem_post(sem_consumed);
 
-    // Wait for shutdown signal
     sem_wait(sem_shutdown);
     cleanup(queue, sem_filled, sem_empty, sem_consumed, sem_shutdown);
 
