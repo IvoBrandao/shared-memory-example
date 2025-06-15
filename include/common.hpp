@@ -24,7 +24,8 @@
 
 // --- Configuration ---
 constexpr std::size_t MEGABYTE          = 1024 * 1024;
-constexpr std::size_t ELEMENT_SIZE      = 200 * MEGABYTE; // per element
+// NOTE: HUGE_PAGES only has an effect if each element is at least 16MB
+constexpr std::size_t ELEMENT_SIZE      = 16 * MEGABYTE; // per element
 constexpr std::size_t ELEMENT_SIZE_MB   = ELEMENT_SIZE / MEGABYTE; // per element
 
 constexpr std::size_t QUEUE_CAPACITY = 10;             // Number of slots available in SHM Queue
